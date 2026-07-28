@@ -24,9 +24,10 @@ export default defineConfig({
       ],
       exclude: [
         "components/ui/**",
-        "features/generated/**",
+        "generated/**",
+        "**/types/**",
         "**/*.test.{ts,tsx}",
-      ],
+        ],
       thresholds: {
         statements: 80,
         branches: 80,
