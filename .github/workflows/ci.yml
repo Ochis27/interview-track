@@ -50,6 +50,9 @@ jobs:
       - name: Run ESLint
         run: pnpm lint
 
+      - name: Run unit and component tests
+        run: pnpm test
+
       - name: Run TypeScript checks
         run: pnpm typecheck
 
