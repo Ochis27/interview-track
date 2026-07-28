@@ -12,7 +12,11 @@ export default defineConfig({
     css: true,
     coverage: {
       provider: "v8",
-      reporter: ["text", "html", "lcov"],
+      reporter: [
+        "text",
+        "html",
+        "lcov",
+      ],
       include: [
         "components/**/*.{ts,tsx}",
         "features/**/*.{ts,tsx}",
@@ -23,6 +27,12 @@ export default defineConfig({
         "features/generated/**",
         "**/*.test.{ts,tsx}",
       ],
+      thresholds: {
+        statements: 80,
+        branches: 80,
+        functions: 80,
+        lines: 80,
+      },
     },
   },
 });
