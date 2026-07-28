@@ -1,20 +1,34 @@
-import type { Metadata } from "next";
-
 import { PageHeader } from "@/components/layout/page-header";
-import { pageContent } from "@/content/pages";
+import { interviewsContent } from "@/content/interviews";
+import { InterviewsTable } from "@/features/interviews/components/interviews-table";
+import {
+  parseInterviewListParams,
+  type InterviewSearchParams,
+} from "@/features/interviews/schemas/interview-list-params";
+import { getInterviews } from "@/features/interviews/server/get-interviews";
 
-const content = pageContent.interviews;
+export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: content.title,
-  description: content.description,
+type InterviewsPageProps = {
+  searchParams: Promise<InterviewSearchParams>;
 };
 
-export default function InterviewsPage() {
+export default async function InterviewsPage({
+  searchParams,
+}: InterviewsPageProps) {
+  const params = parseInterviewListParams(
+    await searchParams,
+  );
+  const data = await getInterviews(params);
+
   return (
-    <PageHeader
-      title={content.title}
-      description={content.description}
-    />
+    <div className="space-y-6">
+      <PageHeader
+        description={interviewsContent.page.description}
+        title={interviewsContent.page.title}
+      />
+
+      <InterviewsTable data={data} params={params} />
+    </div>
   );
 }
