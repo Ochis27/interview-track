@@ -1,0 +1,25 @@
+model InterviewSession {
+  id              String          @id @default(uuid())
+  title           String
+  type            InterviewType
+  status          InterviewStatus @default(SCHEDULED)
+  scheduledAt     DateTime
+  durationMinutes Int             @default(60)
+  notes           String?
+  completedAt     DateTime?
+  candidateId     String
+  interviewerId   String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Restrict)
+  interviewer User?     @relation("InterviewInterviewer", fields: [interviewerId], references: [id], onDelete: SetNull)
+  feedback    Feedback?
+
+  @@index([candidateId])
+  @@index([interviewerId])
+  @@index([status])
+  @@index([type])
+  @@index([scheduledAt])
+  @@index([candidateId, status])
+}

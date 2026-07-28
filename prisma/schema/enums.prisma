@@ -1,0 +1,34 @@
+enum InterviewStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum InterviewType {
+  TECHNICAL
+  CODING
+  SYSTEM_DESIGN
+  BEHAVIORAL
+  OTHER
+}
+
+enum SeniorityLevel {
+  JUNIOR
+  MIDDLE
+  SENIOR
+  LEAD
+}
+
+enum Recommendation {
+  STRONG_HIRE
+  HIRE
+  CONTINUE_PRACTICE
+  NO_HIRE
+}
+
+enum AuditLevel {
+  INFO
+  WARNING
+  ERROR
+}
