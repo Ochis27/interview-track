@@ -41,4 +41,56 @@ export const candidatesContent = {
     SENIOR: "Senior",
     LEAD: "Lead",
   },
+  form: {
+  title: "Add candidate",
+  description:
+    "Create a candidate profile that can be used when scheduling interviews.",
+  addButton: "Add candidate",
+  submit: "Create candidate",
+  submitting: "Creating candidate...",
+  cancel: "Cancel",
+  seniorityPlaceholder: "Select seniority",
+  fields: {
+    firstName: {
+      label: "First name",
+      placeholder: "Alice",
+    },
+    lastName: {
+      label: "Last name",
+      placeholder: "Johnson",
+    },
+    email: {
+      label: "Email address",
+      placeholder: "alice@example.com",
+    },
+    phone: {
+      label: "Phone number",
+      placeholder: "+40 700 000 000",
+    },
+    currentRole: {
+      label: "Current role",
+      placeholder: "Frontend Developer",
+    },
+    targetRole: {
+      label: "Target role",
+      placeholder: "Senior Engineer",
+    },
+    seniority: {
+      label: "Seniority",
+    },
+    yearsExperience: {
+      label: "Years of experience",
+      placeholder: "5",
+    },
+    notes: {
+      label: "Notes",
+      placeholder: "Add relevant candidate information...",
+    },
+  },
+  feedback: {
+    validationError: "Please correct the highlighted fields.",
+    duplicateEmail: "A candidate with this email already exists.",
+    createError: "Unable to create the candidate. Please try again.",
+  },
+},
 } as const;
