@@ -107,7 +107,53 @@ export const interviewsContent = {
       creationFailed:
         "Unable to schedule the interview. Please try again.",
     },
-    noCandidates:
-  "Create at least one candidate before scheduling an interview.",
+    noCandidates: "Create at least one candidate before scheduling an interview.",
   },
+  details: {
+  back: "Back to interviews",
+  overviewTitle: "Interview overview",
+  candidateTitle: "Candidate",
+  notesTitle: "Preparation notes",
+  feedbackTitle: "Feedback",
+  description:
+  "Review the candidate, schedule, preparation notes, and feedback status.",
+loadingLabel: "Loading interview details",
+  labels: {
+    status: "Status",
+    type: "Interview type",
+    scheduledAt: "Scheduled for",
+    duration: "Duration",
+    completedAt: "Completed at",
+    createdAt: "Created at",
+    email: "Email",
+    targetRole: "Target role",
+    seniority: "Seniority",
+  },
+  minutes: "minutes",
+  noNotes: "No preparation notes were added.",
+  notSpecified: "Not specified",
+  feedbackAvailable:
+    "Structured feedback has been submitted for this interview.",
+  feedbackPending:
+    "Feedback has not been submitted for this interview.",
+  actions: {
+  complete: "Complete interview",
+  completing: "Completing...",
+},
+errors: {
+  notFound: "The interview no longer exists.",
+  cannotComplete:
+    "A cancelled interview cannot be completed.",
+  completionFailed:
+    "Unable to complete the interview. Please try again.",
+},
+completeDialog: {
+  title: "Complete interview?",
+  description:
+    "This will mark the interview as completed and record the current completion time.",
+  cancel: "Keep interview open",
+  confirm: "Complete interview",
+},
+},
+
 } as const;

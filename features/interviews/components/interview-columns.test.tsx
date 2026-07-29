@@ -140,6 +140,14 @@ describe("createInterviewColumns", () => {
     expect(screen.getByText("Not submitted"))
       .toBeInTheDocument();
     expect(screen.getByText("Submitted")).toBeInTheDocument();
+    expect(
+  screen.getByRole("link", {
+    name: "Frontend interview",
+  }),
+).toHaveAttribute(
+  "href",
+  "/interviews/interview-1",
+);
   });
 
   it("calls the sorting handler", async () => {

@@ -11,6 +11,7 @@ import {
 } from "@/content/interviews";
 import type { InterviewListItem } from "@/features/interviews/types/interview";
 import { InterviewStatus } from "@/generated/prisma/enums";
+import Link from "next/link";
 
 export type InterviewSortField =
   | "title"
@@ -87,9 +88,12 @@ export function createInterviewColumns({
       ),
       cell: ({ row }) => (
         <div className="min-w-44">
-          <p className="font-medium text-foreground">
-            {row.original.title}
-          </p>
+          <Link
+  className="font-medium text-foreground hover:underline"
+  href={`/interviews/${row.original.id}`}
+>
+  {row.original.title}
+</Link>
           <Badge className="mt-1" variant="outline">
             {interviewTypeLabels[row.original.type]}
           </Badge>
