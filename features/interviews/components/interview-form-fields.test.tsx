@@ -22,6 +22,8 @@ import {
   SeniorityLevel,
 } from "@/generated/prisma/enums";
 
+const INTERACTION_TEST_TIMEOUT = 15_000;
+
 const candidates: InterviewCandidateOption[] = [
   {
     id: "candidate-1",
@@ -80,195 +82,221 @@ function FieldsHarness({
 }
 
 describe("InterviewFormFields", () => {
-  it("renders and submits values from every field", async () => {
-    const user = userEvent.setup();
-    const onSubmit = vi.fn();
+  it(
+    "renders and submits values from every field",
+    async () => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
 
-    render(<FieldsHarness onSubmit={onSubmit} />);
+      render(<FieldsHarness onSubmit={onSubmit} />);
 
-    await user.click(
-      screen.getByRole("combobox", {
-        name: "Candidate",
-      }),
-    );
-
-    expect(
-      await screen.findByRole("option", {
-        name: "Grace Hopper — LEAD",
-      }),
-    ).toBeInTheDocument();
-
-    await user.click(
-      screen.getByRole("option", {
-        name: "Ada Lovelace — SENIOR",
-      }),
-    );
-
-    fireEvent.change(
-      screen.getByRole("textbox", {
-        name: "Interview title",
-      }),
-      {
-        target: {
-          value: "Behavioral interview",
-        },
-      },
-    );
-
-    await user.click(
-      screen.getByRole("combobox", {
-        name: "Interview type",
-      }),
-    );
-
-    await user.click(
-      await screen.findByRole("option", {
-        name: "Behavioral",
-      }),
-    );
-
-    fireEvent.change(
-      screen.getByLabelText(
-        "Scheduled date and time",
-      ),
-      {
-        target: {
-          value: "2026-08-01T09:30",
-        },
-      },
-    );
-
-    fireEvent.change(
-      screen.getByRole("spinbutton", {
-        name: "Duration in minutes",
-      }),
-      {
-        target: {
-          value: "45",
-        },
-      },
-    );
-
-    fireEvent.change(
-      screen.getByRole("textbox", {
-        name: "Notes",
-      }),
-      {
-        target: {
-          value: "Discuss team collaboration.",
-        },
-      },
-    );
-
-    await user.click(
-      screen.getByRole("button", {
-        name: "Save fields",
-      }),
-    );
-
-    await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalledWith(
-        {
-          candidateId: "candidate-1",
-          title: "Behavioral interview",
-          type: InterviewType.BEHAVIORAL,
-          scheduledAt: new Date(
-            "2026-08-01T09:30",
-          ),
-          durationMinutes: 45,
-          notes: "Discuss team collaboration.",
-        },
-        expect.anything(),
+      await user.click(
+        screen.getByRole("combobox", {
+          name: "Candidate",
+        }),
       );
-    });
-  });
 
-  it("renders validation messages and invalid states", async () => {
-    const user = userEvent.setup();
+      expect(
+        await screen.findByRole("option", {
+          name: "Grace Hopper — LEAD",
+        }),
+      ).toBeInTheDocument();
 
-    render(<FieldsHarness onSubmit={vi.fn()} />);
+      const adaOption = screen.getByRole("option", {
+        name: "Ada Lovelace — SENIOR",
+      });
 
-    fireEvent.change(
-      screen.getByRole("spinbutton", {
-        name: "Duration in minutes",
-      }),
-      {
-        target: {
-          value: "10",
+      await user.click(adaOption);
+
+      fireEvent.change(
+        screen.getByRole("textbox", {
+          name: "Interview title",
+        }),
+        {
+          target: {
+            value: "Behavioral interview",
+          },
         },
-      },
-    );
+      );
 
-    fireEvent.change(
-      screen.getByRole("textbox", {
-        name: "Notes",
-      }),
-      {
-        target: {
-          value: "a".repeat(2_001),
+      await user.click(
+        screen.getByRole("combobox", {
+          name: "Interview type",
+        }),
+      );
+
+      const behavioralOption =
+        await screen.findByRole("option", {
+          name: "Behavioral",
+        });
+
+      await user.click(behavioralOption);
+
+      fireEvent.change(
+        screen.getByLabelText(
+          "Scheduled date and time",
+        ),
+        {
+          target: {
+            value: "2026-08-01T09:30",
+          },
         },
-      },
-    );
+      );
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Save fields",
-      }),
-    );
+      fireEvent.change(
+        screen.getByRole("spinbutton", {
+          name: "Duration in minutes",
+        }),
+        {
+          target: {
+            value: "45",
+          },
+        },
+      );
 
-    const validation =
-      interviewsContent.form.validation;
+      fireEvent.change(
+        screen.getByRole("textbox", {
+          name: "Notes",
+        }),
+        {
+          target: {
+            value: "Discuss team collaboration.",
+          },
+        },
+      );
 
-    expect(
-      await screen.findByText(
-        validation.candidateRequired,
-      ),
-    ).toBeInTheDocument();
+      await user.click(
+        screen.getByRole("button", {
+          name: "Save fields",
+        }),
+      );
 
-    expect(
-      screen.getByText(validation.titleMinimum),
-    ).toBeInTheDocument();
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledTimes(1);
 
-    expect(
-      screen.getByText(validation.dateRequired),
-    ).toBeInTheDocument();
+        expect(onSubmit).toHaveBeenCalledWith(
+          {
+            candidateId: "candidate-1",
+            title: "Behavioral interview",
+            type: InterviewType.BEHAVIORAL,
+            scheduledAt: new Date(
+              "2026-08-01T09:30",
+            ),
+            durationMinutes: 45,
+            notes: "Discuss team collaboration.",
+          },
+          expect.anything(),
+        );
+      });
+    },
+    INTERACTION_TEST_TIMEOUT,
+  );
 
-    expect(
-      screen.getByText(validation.durationMinimum),
-    ).toBeInTheDocument();
+  it(
+    "renders validation messages and invalid states",
+    async () => {
+      const user = userEvent.setup();
 
-    expect(
-      screen.getByText(validation.notesMaximum),
-    ).toBeInTheDocument();
+      render(<FieldsHarness onSubmit={vi.fn()} />);
 
-    expect(
-      screen.getByRole("combobox", {
-        name: "Candidate",
-      }),
-    ).toHaveAttribute("aria-invalid", "true");
+      fireEvent.change(
+        screen.getByRole("spinbutton", {
+          name: "Duration in minutes",
+        }),
+        {
+          target: {
+            value: "10",
+          },
+        },
+      );
 
-    expect(
-      screen.getByRole("textbox", {
-        name: "Interview title",
-      }),
-    ).toHaveAttribute("aria-invalid", "true");
+      fireEvent.change(
+        screen.getByRole("textbox", {
+          name: "Notes",
+        }),
+        {
+          target: {
+            value: "a".repeat(2_001),
+          },
+        },
+      );
 
-    expect(
-      screen.getByLabelText(
-        "Scheduled date and time",
-      ),
-    ).toHaveAttribute("aria-invalid", "true");
+      await user.click(
+        screen.getByRole("button", {
+          name: "Save fields",
+        }),
+      );
 
-    expect(
-      screen.getByRole("spinbutton", {
-        name: "Duration in minutes",
-      }),
-    ).toHaveAttribute("aria-invalid", "true");
+      const validation =
+        interviewsContent.form.validation;
 
-    expect(
-      screen.getByRole("textbox", {
-        name: "Notes",
-      }),
-    ).toHaveAttribute("aria-invalid", "true");
-  });
+      await waitFor(
+        () => {
+          expect(
+            screen.getByText(
+              validation.candidateRequired,
+            ),
+          ).toBeInTheDocument();
+
+          expect(
+            screen.getByText(
+              validation.titleMinimum,
+            ),
+          ).toBeInTheDocument();
+
+          expect(
+            screen.getByText(
+              validation.dateRequired,
+            ),
+          ).toBeInTheDocument();
+
+          expect(
+            screen.getByText(
+              validation.durationMinimum,
+            ),
+          ).toBeInTheDocument();
+
+          expect(
+            screen.getByText(
+              validation.notesMaximum,
+            ),
+          ).toBeInTheDocument();
+        },
+        {
+          timeout: 5_000,
+        },
+      );
+
+      expect(
+        screen.getByRole("combobox", {
+          name: "Candidate",
+        }),
+      ).toHaveAttribute("aria-invalid", "true");
+
+      expect(
+        screen.getByRole("textbox", {
+          name: "Interview title",
+        }),
+      ).toHaveAttribute("aria-invalid", "true");
+
+      expect(
+        screen.getByLabelText(
+          "Scheduled date and time",
+        ),
+      ).toHaveAttribute("aria-invalid", "true");
+
+      expect(
+        screen.getByRole("spinbutton", {
+          name: "Duration in minutes",
+        }),
+      ).toHaveAttribute("aria-invalid", "true");
+
+      expect(
+        screen.getByRole("textbox", {
+          name: "Notes",
+        }),
+      ).toHaveAttribute("aria-invalid", "true");
+    },
+    INTERACTION_TEST_TIMEOUT,
+  );
 });

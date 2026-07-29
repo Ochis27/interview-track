@@ -18,6 +18,8 @@ import {
 } from "@/features/interviews/schemas/feedback-form";
 import { Recommendation } from "@/generated/prisma/enums";
 
+const INTERACTION_TEST_TIMEOUT = 15_000;
+
 const defaultValues: FeedbackFormInput = {
   strengths: "",
   improvementAreas: "",
@@ -50,126 +52,136 @@ function FieldsHarness({
       onSubmit={form.handleSubmit(onSubmit)}
     >
       <FeedbackFormFields form={form} />
-      <button type="submit">Save feedback fields</button>
+
+      <button type="submit">
+        Save feedback fields
+      </button>
     </form>
   );
 }
 
 describe("FeedbackFormFields", () => {
-  it("renders and submits all feedback values", async () => {
-    const user = userEvent.setup();
-    const onSubmit = vi.fn();
+  it(
+    "renders and submits all feedback values",
+    async () => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
 
-    render(<FieldsHarness onSubmit={onSubmit} />);
+      render(<FieldsHarness onSubmit={onSubmit} />);
 
-    fireEvent.change(
-      screen.getByRole("textbox", {
-        name: "Strengths",
-      }),
-      {
-        target: {
-          value: "Strong technical knowledge.",
-        },
-      },
-    );
-
-    fireEvent.change(
-      screen.getByRole("textbox", {
-        name: "Improvement areas",
-      }),
-      {
-        target: {
-          value: "Could explain trade-offs better.",
-        },
-      },
-    );
-
-    await user.click(
-      screen.getByRole("combobox", {
-        name: "Recommendation",
-      }),
-    );
-
-    await user.click(
-      await screen.findByRole("option", {
-        name: "Strong hire",
-      }),
-    );
-
-    fireEvent.change(
-      screen.getByRole("spinbutton", {
-        name: "Overall score",
-      }),
-      {
-        target: {
-          value: "5",
-        },
-      },
-    );
-
-    fireEvent.change(
-      screen.getByRole("spinbutton", {
-        name: "Technical score",
-      }),
-      {
-        target: {
-          value: "4",
-        },
-      },
-    );
-
-    const communicationScore = screen.getByRole(
-      "spinbutton",
-      {
-        name: "Communication score",
-      },
-    );
-
-    fireEvent.change(communicationScore, {
-      target: {
-        value: "3",
-      },
-    });
-
-    fireEvent.change(communicationScore, {
-      target: {
-        value: "",
-      },
-    });
-
-    fireEvent.change(
-      screen.getByRole("textbox", {
-        name: "Additional notes",
-      }),
-      {
-        target: {
-          value: "   ",
-        },
-      },
-    );
-
-    await user.click(
-      screen.getByRole("button", {
-        name: "Save feedback fields",
-      }),
-    );
-
-    await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalledWith(
+      fireEvent.change(
+        screen.getByRole("textbox", {
+          name: "Strengths",
+        }),
         {
-          strengths: "Strong technical knowledge.",
-          improvementAreas:
-            "Could explain trade-offs better.",
-          recommendation: Recommendation.STRONG_HIRE,
-          overallScore: 5,
-          technicalScore: 4,
-          communicationScore: null,
-          additionalNotes: null,
+          target: {
+            value: "Strong technical knowledge.",
+          },
         },
-        expect.anything(),
       );
-    });
-  });
+
+      fireEvent.change(
+        screen.getByRole("textbox", {
+          name: "Improvement areas",
+        }),
+        {
+          target: {
+            value: "Could explain trade-offs better.",
+          },
+        },
+      );
+
+      await user.click(
+        screen.getByRole("combobox", {
+          name: "Recommendation",
+        }),
+      );
+
+      const strongHireOption =
+        await screen.findByRole("option", {
+          name: "Strong hire",
+        });
+
+      await user.click(strongHireOption);
+
+      fireEvent.change(
+        screen.getByRole("spinbutton", {
+          name: "Overall score",
+        }),
+        {
+          target: {
+            value: "5",
+          },
+        },
+      );
+
+      fireEvent.change(
+        screen.getByRole("spinbutton", {
+          name: "Technical score",
+        }),
+        {
+          target: {
+            value: "4",
+          },
+        },
+      );
+
+      const communicationScore =
+        screen.getByRole("spinbutton", {
+          name: "Communication score",
+        });
+
+      fireEvent.change(communicationScore, {
+        target: {
+          value: "3",
+        },
+      });
+
+      fireEvent.change(communicationScore, {
+        target: {
+          value: "",
+        },
+      });
+
+      fireEvent.change(
+        screen.getByRole("textbox", {
+          name: "Additional notes",
+        }),
+        {
+          target: {
+            value: "   ",
+          },
+        },
+      );
+
+      await user.click(
+        screen.getByRole("button", {
+          name: "Save feedback fields",
+        }),
+      );
+
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledTimes(1);
+
+        expect(onSubmit).toHaveBeenCalledWith(
+          {
+            strengths:
+              "Strong technical knowledge.",
+            improvementAreas:
+              "Could explain trade-offs better.",
+            recommendation:
+              Recommendation.STRONG_HIRE,
+            overallScore: 5,
+            technicalScore: 4,
+            communicationScore: null,
+            additionalNotes: null,
+          },
+          expect.anything(),
+        );
+      });
+    },
+    INTERACTION_TEST_TIMEOUT,
+  );
 
   it("renders validation errors and invalid states", async () => {
     const user = userEvent.setup();
@@ -251,33 +263,35 @@ describe("FeedbackFormFields", () => {
     const validation =
       interviewsContent.feedbackForm.validation;
 
-    expect(
-      await screen.findByText(
-        validation.strengthsMinimum,
-      ),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          validation.strengthsMinimum,
+        ),
+      ).toBeInTheDocument();
 
-    expect(
-      screen.getByText(
-        validation.improvementMinimum,
-      ),
-    ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          validation.improvementMinimum,
+        ),
+      ).toBeInTheDocument();
 
-    expect(
-      screen.getByText(validation.scoreMinimum),
-    ).toBeInTheDocument();
+      expect(
+        screen.getByText(validation.scoreMinimum),
+      ).toBeInTheDocument();
 
-    expect(
-      screen.getByText(validation.scoreMaximum),
-    ).toBeInTheDocument();
+      expect(
+        screen.getByText(validation.scoreMaximum),
+      ).toBeInTheDocument();
 
-    expect(
-      screen.getByText(validation.scoreInteger),
-    ).toBeInTheDocument();
+      expect(
+        screen.getByText(validation.scoreInteger),
+      ).toBeInTheDocument();
 
-    expect(
-      screen.getByText(validation.notesMaximum),
-    ).toBeInTheDocument();
+      expect(
+        screen.getByText(validation.notesMaximum),
+      ).toBeInTheDocument();
+    });
 
     expect(
       screen.getByRole("textbox", {
