@@ -1,4 +1,8 @@
+import Link from "next/link";
+import { CalendarPlus } from "lucide-react";
+
 import { PageHeader } from "@/components/layout/page-header";
+import { buttonVariants } from "@/components/ui/button";
 import { interviewsContent } from "@/content/interviews";
 import { InterviewsTable } from "@/features/interviews/components/interviews-table";
 import {
@@ -23,10 +27,23 @@ export default async function InterviewsPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        description={interviewsContent.page.description}
-        title={interviewsContent.page.title}
-      />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <PageHeader
+          description={interviewsContent.page.description}
+          title={interviewsContent.page.title}
+        />
+
+        <Link
+          className={buttonVariants()}
+          href="/interviews/new"
+        >
+          <CalendarPlus
+            aria-hidden="true"
+            className="size-4"
+          />
+          {interviewsContent.actions.create}
+        </Link>
+      </div>
 
       <InterviewsTable data={data} params={params} />
     </div>
