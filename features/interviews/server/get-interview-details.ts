@@ -28,6 +28,15 @@ const interviewDetailsSelection = {
   feedback: {
     select: {
       id: true,
+      strengths: true,
+      improvementAreas: true,
+      recommendation: true,
+      overallScore: true,
+      technicalScore: true,
+      communicationScore: true,
+      additionalNotes: true,
+      createdAt: true,
+      updatedAt: true,
     },
   },
 } as const;
@@ -62,11 +71,9 @@ export async function getInterviewDetails(
       return null;
     }
 
-    const { feedback, ...details } = interview;
-
     return {
-      ...details,
-      hasFeedback: feedback !== null,
+      ...interview,
+      hasFeedback: interview.feedback !== null,
     };
   } catch (error) {
     logger.error(

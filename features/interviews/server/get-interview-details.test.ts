@@ -1,14 +1,9 @@
-import {
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   InterviewStatus,
   InterviewType,
+  Recommendation,
   SeniorityLevel,
 } from "@/generated/prisma/enums";
 
@@ -37,25 +32,43 @@ vi.mock("@/lib/logging/logger", () => ({
 
 import { getInterviewDetails } from "@/features/interviews/server/get-interview-details";
 
-const interview = {
-  id: "interview-1",
+const interviewId = "interview-1";
+
+const baseInterview = {
+  id: interviewId,
   title: "Senior frontend interview",
   type: InterviewType.TECHNICAL,
-  status: InterviewStatus.SCHEDULED,
-  scheduledAt: new Date("2026-08-01T09:30:00.000Z"),
+  status: InterviewStatus.COMPLETED,
+  scheduledAt: new Date("2026-07-29T09:00:00.000Z"),
   durationMinutes: 60,
-  notes: "Focus on architecture.",
-  completedAt: null,
-  createdAt: new Date("2026-07-29T08:00:00.000Z"),
-  updatedAt: new Date("2026-07-29T08:00:00.000Z"),
+  notes: "Focus on React and system design.",
+  completedAt: new Date("2026-07-29T10:00:00.000Z"),
+  createdAt: new Date("2026-07-28T08:00:00.000Z"),
+  updatedAt: new Date("2026-07-29T10:00:00.000Z"),
   candidate: {
     id: "candidate-1",
-    firstName: "Ada",
-    lastName: "Lovelace",
-    email: "ada@example.com",
+    firstName: "Ana",
+    lastName: "Popescu",
+    email: "ana.popescu@example.com",
     targetRole: "Senior Frontend Engineer",
     seniority: SeniorityLevel.SENIOR,
   },
+};
+
+const feedback = {
+  id: "feedback-1",
+  strengths:
+    "Strong React knowledge and excellent problem-solving.",
+  improvementAreas:
+    "Could communicate architectural trade-offs more clearly.",
+  recommendation: Recommendation.STRONG_HIRE,
+  overallScore: 5,
+  technicalScore: 5,
+  communicationScore: 4,
+  additionalNotes:
+    "The candidate performed very well throughout the interview.",
+  createdAt: new Date("2026-07-29T10:05:00.000Z"),
+  updatedAt: new Date("2026-07-29T10:05:00.000Z"),
 };
 
 describe("getInterviewDetails", () => {
@@ -63,21 +76,23 @@ describe("getInterviewDetails", () => {
     vi.clearAllMocks();
   });
 
-  it("returns interview details with feedback", async () => {
+  it("returns interview details with complete feedback", async () => {
     mocks.findUnique.mockResolvedValue({
-      ...interview,
-      feedback: {
-        id: "feedback-1",
-      },
+      ...baseInterview,
+      feedback,
     });
 
-    const result = await getInterviewDetails(
-      "interview-1",
-    );
+    await expect(
+      getInterviewDetails(interviewId),
+    ).resolves.toEqual({
+      ...baseInterview,
+      feedback,
+      hasFeedback: true,
+    });
 
     expect(mocks.findUnique).toHaveBeenCalledWith({
       where: {
-        id: "interview-1",
+        id: interviewId,
       },
       select: {
         id: true,
@@ -103,22 +118,25 @@ describe("getInterviewDetails", () => {
         feedback: {
           select: {
             id: true,
+            strengths: true,
+            improvementAreas: true,
+            recommendation: true,
+            overallScore: true,
+            technicalScore: true,
+            communicationScore: true,
+            additionalNotes: true,
+            createdAt: true,
+            updatedAt: true,
           },
         },
       },
     });
 
-    expect(result).toEqual({
-      ...interview,
-      hasFeedback: true,
-    });
-
     expect(mocks.debug).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "interview_details_loaded",
-        durationMs: expect.any(Number),
         found: true,
-        interviewId: "interview-1",
+        interviewId,
       }),
       "Interview details loaded.",
     );
@@ -126,14 +144,15 @@ describe("getInterviewDetails", () => {
 
   it("returns details without feedback", async () => {
     mocks.findUnique.mockResolvedValue({
-      ...interview,
+      ...baseInterview,
       feedback: null,
     });
 
     await expect(
-      getInterviewDetails("interview-1"),
+      getInterviewDetails(interviewId),
     ).resolves.toEqual({
-      ...interview,
+      ...baseInterview,
+      feedback: null,
       hasFeedback: false,
     });
   });
@@ -142,37 +161,33 @@ describe("getInterviewDetails", () => {
     mocks.findUnique.mockResolvedValue(null);
 
     await expect(
-      getInterviewDetails("missing-interview"),
+      getInterviewDetails(interviewId),
     ).resolves.toBeNull();
 
     expect(mocks.debug).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "interview_details_loaded",
         found: false,
-        interviewId: "missing-interview",
+        interviewId,
       }),
       "Interview details loaded.",
     );
   });
 
   it("logs failures and throws a safe error", async () => {
-    const databaseError = new Error(
-      "Sensitive database error",
-    );
+    const databaseError = new Error("Database unavailable");
 
     mocks.findUnique.mockRejectedValue(databaseError);
 
     await expect(
-      getInterviewDetails("interview-1"),
-    ).rejects.toThrow(
-      "Unable to load interview details.",
-    );
+      getInterviewDetails(interviewId),
+    ).rejects.toThrow("Unable to load interview details.");
 
     expect(mocks.error).toHaveBeenCalledWith(
       {
         action: "interview_details_failed",
         err: databaseError,
-        interviewId: "interview-1",
+        interviewId,
       },
       "Unable to load interview details.",
     );

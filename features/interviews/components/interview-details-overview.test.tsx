@@ -21,6 +21,7 @@ const interview: InterviewDetails = {
   createdAt: new Date(2026, 6, 29, 8),
   updatedAt: new Date(2026, 6, 29, 8),
   hasFeedback: false,
+  feedback: null,
   candidate: {
     id: "candidate-1",
     firstName: "Ada",
@@ -34,23 +35,29 @@ const interview: InterviewDetails = {
 describe("InterviewDetailsOverview", () => {
   it("renders scheduled interview information", () => {
     render(
-      <InterviewDetailsOverview
-        interview={interview}
-      />,
+      <InterviewDetailsOverview interview={interview} />,
     );
 
     expect(
       screen.getByText("Interview overview"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Scheduled"))
-      .toBeInTheDocument();
-    expect(screen.getByText("Technical"))
-      .toBeInTheDocument();
+
+    expect(
+      screen.getByText("Scheduled"),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("Technical"),
+    ).toBeInTheDocument();
+
     expect(
       screen.getByText("Aug 1, 2026, 09:30"),
     ).toBeInTheDocument();
-    expect(screen.getByText("60 minutes"))
-      .toBeInTheDocument();
+
+    expect(
+      screen.getByText("60 minutes"),
+    ).toBeInTheDocument();
+
     expect(
       screen.queryByText("Completed at"),
     ).not.toBeInTheDocument();
@@ -73,10 +80,14 @@ describe("InterviewDetailsOverview", () => {
       />,
     );
 
-    expect(screen.getByText("Completed"))
-      .toBeInTheDocument();
-    expect(screen.getByText("Completed at"))
-      .toBeInTheDocument();
+    expect(
+      screen.getByText("Completed"),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("Completed at"),
+    ).toBeInTheDocument();
+
     expect(
       screen.getByText("Aug 1, 2026, 10:30"),
     ).toBeInTheDocument();
