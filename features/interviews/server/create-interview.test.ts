@@ -7,82 +7,112 @@ import {
 } from "vitest";
 
 import { interviewsContent } from "@/content/interviews";
-import { InterviewType } from "@/generated/prisma/enums";
+import {
+  InterviewType,
+} from "@/generated/prisma/enums";
 
 const mocks = vi.hoisted(() => ({
-  findUnique: vi.fn(),
-  create: vi.fn(),
-  info: vi.fn(),
-  warn: vi.fn(),
+  candidateFindUnique: vi.fn(),
   error: vi.fn(),
+  info: vi.fn(),
+  interviewCreate: vi.fn(),
+  recordAuditEvent: vi.fn(),
+  warn: vi.fn(),
 }));
+
+vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     candidate: {
-      findUnique: mocks.findUnique,
+      findUnique: mocks.candidateFindUnique,
     },
     interviewSession: {
-      create: mocks.create,
+      create: mocks.interviewCreate,
     },
   },
 }));
 
 vi.mock("@/lib/logging/logger", () => ({
   logger: {
+    error: mocks.error,
     info: mocks.info,
     warn: mocks.warn,
-    error: mocks.error,
   },
 }));
 
-import { createInterview } from "@/features/interviews/server/create-interview";
+vi.mock(
+  "@/lib/audit/record-audit-event",
+  () => ({
+    recordAuditEvent: mocks.recordAuditEvent,
+  }),
+);
 
-const validInput = {
-  candidateId: "candidate-1",
+const { createInterview } = await import(
+  "@/features/interviews/server/create-interview"
+);
+
+const scheduledAtInput = "2026-08-01T09:30";
+const scheduledAtDate = new Date(scheduledAtInput);
+
+const validInterview = {
+  candidateId:
+    "11111111-1111-4111-8111-111111111111",
   title: "Senior frontend interview",
   type: InterviewType.TECHNICAL,
-  scheduledAt: "2026-07-30T14:30",
+  scheduledAt: scheduledAtInput,
   durationMinutes: 60,
-  notes: "Focus on application architecture.",
+  notes: "Focus on architecture and testing.",
 };
 
 describe("createInterview", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    mocks.recordAuditEvent.mockResolvedValue(
+      undefined,
+    );
   });
 
   it("returns validation errors for invalid input", async () => {
-    const result = await createInterview({
-      ...validInput,
-      candidateId: "",
-      title: "a",
-    });
+    const result = await createInterview({});
 
     expect(result).toEqual(
       expect.objectContaining({
         success: false,
         message:
           interviewsContent.form.errors.validation,
-        fieldErrors: expect.objectContaining({
-          candidateId: expect.any(Array),
-          title: expect.any(Array),
-        }),
+        fieldErrors: expect.any(Object),
       }),
     );
 
-    expect(mocks.findUnique).not.toHaveBeenCalled();
-    expect(mocks.create).not.toHaveBeenCalled();
+    expect(
+      mocks.candidateFindUnique,
+    ).not.toHaveBeenCalled();
+
+    expect(
+      mocks.interviewCreate,
+    ).not.toHaveBeenCalled();
+
+    expect(
+      mocks.recordAuditEvent,
+    ).not.toHaveBeenCalled();
   });
 
   it("rejects a candidate that no longer exists", async () => {
-    mocks.findUnique.mockResolvedValue(null);
+    mocks.candidateFindUnique.mockResolvedValue(
+      null,
+    );
 
-    const result = await createInterview(validInput);
+    const result = await createInterview(
+      validInterview,
+    );
 
-    expect(mocks.findUnique).toHaveBeenCalledWith({
+    expect(
+      mocks.candidateFindUnique,
+    ).toHaveBeenCalledWith({
       where: {
-        id: "candidate-1",
+        id: validInterview.candidateId,
       },
       select: {
         id: true,
@@ -92,89 +122,175 @@ describe("createInterview", () => {
     expect(result).toEqual({
       success: false,
       message:
-        interviewsContent.form.errors.candidateMissing,
+        interviewsContent.form.errors
+          .candidateMissing,
       fieldErrors: {
         candidateId: [
-          interviewsContent.form.errors.candidateMissing,
+          interviewsContent.form.errors
+            .candidateMissing,
         ],
       },
     });
 
-    expect(mocks.create).not.toHaveBeenCalled();
+    expect(
+      mocks.interviewCreate,
+    ).not.toHaveBeenCalled();
+
+    expect(
+      mocks.recordAuditEvent,
+    ).not.toHaveBeenCalled();
 
     expect(mocks.warn).toHaveBeenCalledWith(
       {
         action: "interview_candidate_missing",
-        candidateId: "candidate-1",
+        candidateId:
+          validInterview.candidateId,
       },
       "Unable to schedule interview for missing candidate.",
     );
   });
 
-  it("creates and returns a scheduled interview", async () => {
-    mocks.findUnique.mockResolvedValue({
-      id: "candidate-1",
+  it("creates, audits, and returns a scheduled interview", async () => {
+    mocks.candidateFindUnique.mockResolvedValue({
+      id: validInterview.candidateId,
     });
 
-    mocks.create.mockResolvedValue({
+    mocks.interviewCreate.mockResolvedValue({
       id: "interview-1",
     });
 
-    const result = await createInterview(validInput);
+    const result = await createInterview(
+      validInterview,
+    );
 
-    expect(mocks.create).toHaveBeenCalledWith({
+    expect(mocks.interviewCreate).toHaveBeenCalledWith({
       data: {
-        candidateId: "candidate-1",
-        durationMinutes: 60,
-        notes: "Focus on application architecture.",
-        scheduledAt: new Date("2026-07-30T14:30"),
-        title: "Senior frontend interview",
-        type: InterviewType.TECHNICAL,
+        candidateId:
+          validInterview.candidateId,
+        durationMinutes:
+          validInterview.durationMinutes,
+        notes: validInterview.notes,
+        scheduledAt: scheduledAtDate,
+        title: validInterview.title,
+        type: validInterview.type,
       },
       select: {
         id: true,
       },
     });
 
-    expect(result).toEqual({
-      success: true,
-      interviewId: "interview-1",
+    expect(
+      mocks.recordAuditEvent,
+    ).toHaveBeenCalledTimes(1);
+
+    expect(
+      mocks.recordAuditEvent,
+    ).toHaveBeenCalledWith({
+      action: "INTERVIEW_CREATED",
+      entityType: "InterviewSession",
+      entityId: "interview-1",
+      message: "Interview session created.",
+      metadata: {
+        candidateId:
+          validInterview.candidateId,
+        durationMinutes:
+          validInterview.durationMinutes,
+        scheduledAt:
+          scheduledAtDate.toISOString(),
+        title: validInterview.title,
+        type: validInterview.type,
+      },
     });
 
     expect(mocks.info).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "interview_created",
-        candidateId: "candidate-1",
+        candidateId:
+          validInterview.candidateId,
         durationMs: expect.any(Number),
         interviewId: "interview-1",
       }),
       "Interview scheduled.",
     );
+
+    expect(result).toEqual({
+      success: true,
+      interviewId: "interview-1",
+    });
   });
 
-  it("returns a safe error when persistence fails", async () => {
+  it("returns a safe error when candidate lookup fails", async () => {
     const databaseError = new Error(
-      "Sensitive database error",
+      "Candidate lookup failed",
     );
 
-    mocks.findUnique.mockResolvedValue({
-      id: "candidate-1",
-    });
+    mocks.candidateFindUnique.mockRejectedValue(
+      databaseError,
+    );
 
-    mocks.create.mockRejectedValue(databaseError);
-
-    const result = await createInterview(validInput);
+    const result = await createInterview(
+      validInterview,
+    );
 
     expect(result).toEqual({
       success: false,
       message:
-        interviewsContent.form.errors.creationFailed,
+        interviewsContent.form.errors
+          .creationFailed,
     });
+
+    expect(
+      mocks.interviewCreate,
+    ).not.toHaveBeenCalled();
+
+    expect(
+      mocks.recordAuditEvent,
+    ).not.toHaveBeenCalled();
 
     expect(mocks.error).toHaveBeenCalledWith(
       {
         action: "interview_creation_failed",
-        candidateId: "candidate-1",
+        candidateId:
+          validInterview.candidateId,
+        err: databaseError,
+      },
+      "Unable to schedule interview.",
+    );
+  });
+
+  it("returns a safe error when persistence fails", async () => {
+    const databaseError = new Error(
+      "Interview creation failed",
+    );
+
+    mocks.candidateFindUnique.mockResolvedValue({
+      id: validInterview.candidateId,
+    });
+
+    mocks.interviewCreate.mockRejectedValue(
+      databaseError,
+    );
+
+    const result = await createInterview(
+      validInterview,
+    );
+
+    expect(result).toEqual({
+      success: false,
+      message:
+        interviewsContent.form.errors
+          .creationFailed,
+    });
+
+    expect(
+      mocks.recordAuditEvent,
+    ).not.toHaveBeenCalled();
+
+    expect(mocks.error).toHaveBeenCalledWith(
+      {
+        action: "interview_creation_failed",
+        candidateId:
+          validInterview.candidateId,
         err: databaseError,
       },
       "Unable to schedule interview.",

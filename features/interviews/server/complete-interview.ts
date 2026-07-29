@@ -3,7 +3,14 @@
 import { revalidatePath } from "next/cache";
 
 import { interviewsContent } from "@/content/interviews";
-import { InterviewStatus } from "@/generated/prisma/enums";
+import {
+  InterviewStatus,
+} from "@/generated/prisma/enums";
+import {
+  auditActions,
+  auditEntityTypes,
+} from "@/lib/audit/audit-events";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
 import { prisma } from "@/lib/db/prisma";
 import { logger } from "@/lib/logging/logger";
 
@@ -49,7 +56,10 @@ export async function completeInterview(
       };
     }
 
-    if (interview.status === InterviewStatus.COMPLETED) {
+    if (
+      interview.status ===
+      InterviewStatus.COMPLETED
+    ) {
       logger.info(
         {
           action: "interview_already_completed",
@@ -63,10 +73,14 @@ export async function completeInterview(
       };
     }
 
-    if (interview.status === InterviewStatus.CANCELLED) {
+    if (
+      interview.status ===
+      InterviewStatus.CANCELLED
+    ) {
       logger.warn(
         {
-          action: "interview_completion_rejected",
+          action:
+            "interview_completion_rejected",
           interviewId,
           status: interview.status,
         },
@@ -85,6 +99,16 @@ export async function completeInterview(
       },
       data: {
         completedAt: new Date(),
+        status: InterviewStatus.COMPLETED,
+      },
+    });
+
+    await recordAuditEvent({
+      action: auditActions.interviewCompleted,
+      entityType: auditEntityTypes.interview,
+      entityId: interviewId,
+      message: "Interview session completed.",
+      metadata: {
         status: InterviewStatus.COMPLETED,
       },
     });

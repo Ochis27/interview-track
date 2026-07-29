@@ -7,6 +7,11 @@ import {
   candidateFormSchema,
   type CandidateFormInput,
 } from "@/features/candidates/schemas/candidate-form";
+import {
+  auditActions,
+  auditEntityTypes,
+} from "@/lib/audit/audit-events";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
 import { prisma } from "@/lib/db/prisma";
 import { logger } from "@/lib/logging/logger";
 
@@ -25,7 +30,9 @@ export type CreateCandidateResult =
       fieldErrors?: CandidateFieldErrors;
     };
 
-function isUniqueConstraintError(error: unknown): boolean {
+function isUniqueConstraintError(
+  error: unknown,
+): boolean {
   if (!(error instanceof Object)) {
     return false;
   }
@@ -36,12 +43,14 @@ function isUniqueConstraintError(error: unknown): boolean {
 export async function createCandidate(
   input: unknown,
 ): Promise<CreateCandidateResult> {
-  const validation = candidateFormSchema.safeParse(input);
+  const validation =
+    candidateFormSchema.safeParse(input);
 
   if (!validation.success) {
     logger.warn(
       {
-        action: "candidate_create_validation_failed",
+        action:
+          "candidate_create_validation_failed",
         fields: Object.keys(
           validation.error.flatten().fieldErrors,
         ),
@@ -52,18 +61,33 @@ export async function createCandidate(
     return {
       success: false,
       message:
-        candidatesContent.form.feedback.validationError,
-      fieldErrors: validation.error.flatten().fieldErrors,
+        candidatesContent.form.feedback
+          .validationError,
+      fieldErrors:
+        validation.error.flatten().fieldErrors,
     };
   }
 
   const startedAt = Date.now();
+  const values = validation.data;
 
   try {
     const candidate = await prisma.candidate.create({
-      data: validation.data,
+      data: values,
       select: {
         id: true,
+      },
+    });
+
+    await recordAuditEvent({
+      action: auditActions.candidateCreated,
+      entityType: auditEntityTypes.candidate,
+      entityId: candidate.id,
+      message: "Candidate profile created.",
+      metadata: {
+        email: values.email,
+        seniority: values.seniority,
+        targetRole: values.targetRole,
       },
     });
 
@@ -86,7 +110,8 @@ export async function createCandidate(
     if (isUniqueConstraintError(error)) {
       logger.warn(
         {
-          action: "candidate_create_duplicate_email",
+          action:
+            "candidate_create_duplicate_email",
         },
         "Candidate creation rejected because the email already exists.",
       );
@@ -94,10 +119,12 @@ export async function createCandidate(
       return {
         success: false,
         message:
-          candidatesContent.form.feedback.duplicateEmail,
+          candidatesContent.form.feedback
+            .duplicateEmail,
         fieldErrors: {
           email: [
-            candidatesContent.form.feedback.duplicateEmail,
+            candidatesContent.form.feedback
+              .duplicateEmail,
           ],
         },
       };
@@ -105,16 +132,17 @@ export async function createCandidate(
 
     logger.error(
       {
-        err: error,
         action: "candidate_create_failed",
         durationMs: Date.now() - startedAt,
+        err: error,
       },
       "Candidate creation failed.",
     );
 
     return {
       success: false,
-      message: candidatesContent.form.feedback.createError,
+      message:
+        candidatesContent.form.feedback.createError,
     };
   }
 }

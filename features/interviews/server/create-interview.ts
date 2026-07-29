@@ -5,6 +5,11 @@ import {
   interviewFormSchema,
   type InterviewFormInput,
 } from "@/features/interviews/schemas/interview-form";
+import {
+  auditActions,
+  auditEntityTypes,
+} from "@/lib/audit/audit-events";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
 import { prisma } from "@/lib/db/prisma";
 import { logger } from "@/lib/logging/logger";
 
@@ -33,7 +38,8 @@ export async function createInterview(
     return {
       success: false,
       message: errors.validation,
-      fieldErrors: parsed.error.flatten().fieldErrors,
+      fieldErrors:
+        parsed.error.flatten().fieldErrors,
     };
   }
 
@@ -41,14 +47,15 @@ export async function createInterview(
   const values = parsed.data;
 
   try {
-    const candidate = await prisma.candidate.findUnique({
-      where: {
-        id: values.candidateId,
-      },
-      select: {
-        id: true,
-      },
-    });
+    const candidate =
+      await prisma.candidate.findUnique({
+        where: {
+          id: values.candidateId,
+        },
+        select: {
+          id: true,
+        },
+      });
 
     if (!candidate) {
       logger.warn(
@@ -63,22 +70,42 @@ export async function createInterview(
         success: false,
         message: errors.candidateMissing,
         fieldErrors: {
-          candidateId: [errors.candidateMissing],
+          candidateId: [
+            errors.candidateMissing,
+          ],
         },
       };
     }
 
-    const interview = await prisma.interviewSession.create({
-      data: {
+    const interview =
+      await prisma.interviewSession.create({
+        data: {
+          candidateId: values.candidateId,
+          durationMinutes:
+            values.durationMinutes,
+          notes: values.notes,
+          scheduledAt: values.scheduledAt,
+          title: values.title,
+          type: values.type,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    await recordAuditEvent({
+      action: auditActions.interviewCreated,
+      entityType: auditEntityTypes.interview,
+      entityId: interview.id,
+      message: "Interview session created.",
+      metadata: {
         candidateId: values.candidateId,
-        durationMinutes: values.durationMinutes,
-        notes: values.notes,
-        scheduledAt: values.scheduledAt,
+        durationMinutes:
+          values.durationMinutes,
+        scheduledAt:
+          values.scheduledAt.toISOString(),
         title: values.title,
         type: values.type,
-      },
-      select: {
-        id: true,
       },
     });
 

@@ -4,7 +4,14 @@ import { revalidatePath } from "next/cache";
 
 import { interviewsContent } from "@/content/interviews";
 import { feedbackFormSchema } from "@/features/interviews/schemas/feedback-form";
-import { InterviewStatus } from "@/generated/prisma/enums";
+import {
+  InterviewStatus,
+} from "@/generated/prisma/enums";
+import {
+  auditActions,
+  auditEntityTypes,
+} from "@/lib/audit/audit-events";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
 import { prisma } from "@/lib/db/prisma";
 import { logger } from "@/lib/logging/logger";
 
@@ -31,13 +38,15 @@ export async function createFeedback(
   input: unknown,
 ): Promise<CreateFeedbackResult> {
   const parsed = feedbackFormSchema.safeParse(input);
-  const errors = interviewsContent.feedbackForm.errors;
+  const errors =
+    interviewsContent.feedbackForm.errors;
 
   if (!parsed.success) {
     return {
       success: false,
       message: errors.validation,
-      fieldErrors: parsed.error.flatten().fieldErrors,
+      fieldErrors:
+        parsed.error.flatten().fieldErrors,
     };
   }
 
@@ -75,10 +84,14 @@ export async function createFeedback(
       };
     }
 
-    if (interview.status !== InterviewStatus.COMPLETED) {
+    if (
+      interview.status !==
+      InterviewStatus.COMPLETED
+    ) {
       logger.warn(
         {
-          action: "feedback_interview_incomplete",
+          action:
+            "feedback_interview_incomplete",
           interviewId,
           status: interview.status,
         },
@@ -112,8 +125,10 @@ export async function createFeedback(
     const feedback = await prisma.feedback.create({
       data: {
         additionalNotes: values.additionalNotes,
-        communicationScore: values.communicationScore,
-        improvementAreas: values.improvementAreas,
+        communicationScore:
+          values.communicationScore,
+        improvementAreas:
+          values.improvementAreas,
         interviewSessionId: interviewId,
         overallScore: values.overallScore,
         recommendation: values.recommendation,
@@ -122,6 +137,18 @@ export async function createFeedback(
       },
       select: {
         id: true,
+      },
+    });
+
+    await recordAuditEvent({
+      action: auditActions.feedbackSubmitted,
+      entityType: auditEntityTypes.feedback,
+      entityId: feedback.id,
+      message: "Interview feedback submitted.",
+      metadata: {
+        interviewId,
+        overallScore: values.overallScore,
+        recommendation: values.recommendation,
       },
     });
 
