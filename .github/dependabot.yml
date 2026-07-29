@@ -12,6 +12,9 @@ updates:
 
     open-pull-requests-limit: 5
 
+    cooldown:
+      default-days: 7
+
     groups:
       production-dependencies:
         patterns:
@@ -43,6 +46,9 @@ updates:
       timezone: "Europe/Bucharest"
 
     open-pull-requests-limit: 3
+
+    cooldown:
+      default-days: 7
 
     groups:
       github-actions:
