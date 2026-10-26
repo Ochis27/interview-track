@@ -1086,6 +1086,4 @@ tests/
 
 ## Author
 
-## Author
-
 Developed by [Paul-Catalin Ochis](https://github.com/Ochis27).
