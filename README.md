@@ -3,8 +3,7 @@
 [![CI](https://github.com/Ochis27/interview-track/actions/workflows/ci.yml/badge.svg)](https://github.com/Ochis27/interview-track/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/Ochis27/interview-track/actions/workflows/codeql.yml/badge.svg)](https://github.com/Ochis27/interview-track/actions/workflows/codeql.yml)
 
-Interview Track is a full-stack interview workflow application developed for
-the Magna Electronics technical assignment.
+Interview Track is a full-stack interview workflow.
 
 It provides a central workspace for managing candidates, scheduling and
 completing interviews, submitting structured feedback, reviewing reports, and
