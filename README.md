@@ -1088,4 +1088,4 @@ tests/
 
 ## Author
 
-Developed by [Paul-Catalin Ochis](https://github.com/Ochis27) as part of the Magna Electronics Full Stack Engineer practical assignment.
+Developed by [Paul-Catalin Ochis](https://github.com/Ochis27).
